@@ -1,0 +1,43 @@
+es_host: logmon-elasticsearch
+es_port: 9200
+index: logstash-*
+name: "filebeat_heartbeat_check"
+type: blacklist
+
+filter:
+- query:
+    query_string:
+        query: 'monitoring'
+
+aggregation:
+  minutes: 1
+realert:
+  minutes: 0
+
+alert_text: |
+  [{}]
+  Time: {}
+  Log Level: [{}]
+  Log Message:
+  {}
+
+alert_text_args:
+  - host_name
+  - "@timestamp"
+  - level
+  - message
+  
+alert_text_type: exclude_fields
+
+compare_key: "level"
+
+blacklist:
+- "HEARTBEAT"
+
+ignore_null: True
+
+alert:
+- "ms_teams"
+
+ms_teams_webhook_url:
+ms_teams_alert_summary: "Log monitor"
