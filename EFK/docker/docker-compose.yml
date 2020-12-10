@@ -1,0 +1,98 @@
+version: "3"
+services:
+  logmon-fluentd:
+    build:
+      context: ./fluentd/.
+      dockerfile: fluentd.dockerfile
+    container_name: logmon-fluentd
+    hostname: logmon-fluentd
+    volumes:
+      - ./fluentd/fluent.conf:/fluentd/etc/fluent.conf
+    environment:
+      - FLUENT_UID=0
+    links:
+      - logmon-elasticsearch
+    ports:
+      - "24224:24224"
+      - "24224:24224/udp"
+      - "5044:5044"
+    privileged: true
+    depends_on:
+      - logmon-elasticsearch
+    networks:
+      - logmon
+    labels:
+      org.label-schema.group: "log-monitor"
+
+  logmon-elasticsearch:
+    image: elasticsearch:7.8.1
+    container_name: logmon-elasticsearch
+    hostname: logmon-elasticsearch
+    volumes:
+      - ../data/elasticsearch:/usr/share/elasticsearch/data
+    environment:
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+      - cluster.initial_master_nodes=logmon-elasticsearch
+    expose:
+      - 9200
+    ports:
+      - 9200:9200
+    networks:
+      - logmon
+    labels:
+      org.label-schema.group: "log-monitor"
+
+  logmon-kibana:
+    image: kibana:7.8.1
+    container_name: logmon-kibana
+    hostname: logmon-kibana
+    links:
+      - logmon-elasticsearch
+    depends_on:
+      - logmon-elasticsearch
+    environment:
+      - ELASTICSEARCH_HOSTS=http://logmon-elasticsearch:9200
+    restart : always
+    ports:
+      - 5601:5601
+    networks:
+      - logmon
+    labels:
+      org.label-schema.group: "log-monitor"
+
+  logmon-curator:
+    build:
+      context: ./curator/.
+      dockerfile: dockerfile
+      args:
+        CURATOR_VERSION: 5.7
+    container_name: logmon-curator
+    hostname: logmon-curator
+    links:
+      - logmon-elasticsearch
+    networks:
+      - logmon
+    labels:
+      org.label-schema.group: "log-monitor"
+    depends_on:
+      - logmon-elasticsearch
+    volumes:
+      - ./curator:/config
+
+  logmon-elastalert:
+    build:
+      context: ./elastalert/.
+      dockerfile: elastalert.dockerfile
+    container_name: logmon-elastalert
+    hostname: logmon-elastalert
+    environment:
+      - TEAMS_LOG_ALERT_WEBHOOK=${TEAMS_LOG_ALERT_WEBHOOK}
+      - TEAMS_LOG_HEARTBEAT_WEBHOOK=${TEAMS_LOG_HEARTBEAT_WEBHOOK}
+    networks:
+      - logmon
+    labels:
+      org.label-schema.group: "log-monitor"
+
+networks:
+  logmon:
+    driver: bridge
