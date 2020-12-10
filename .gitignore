@@ -1,0 +1,3 @@
+# ignore container data
+data/
+logs/
