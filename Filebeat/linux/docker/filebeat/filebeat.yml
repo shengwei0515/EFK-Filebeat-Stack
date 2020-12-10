@@ -1,0 +1,41 @@
+filebeat.inputs: 
+## beats log ##
+- type: log
+  enabled: true
+  paths: 
+    - /var/log/filebeat/filebeat*
+  fields:
+    tag: filebeat
+  ignore_older: 168h
+  multiline:
+    pattern: '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
+    negate: true
+    match: after
+
+# - type: log
+#   enabled: true
+#   paths: 
+#     - <some log path in host>
+#   fields:
+#     tag: <tag you set in fluent.conf for this log>
+#   ignore_older: 168h
+#   multiline:
+#     pattern: <timeformat of this log>
+#     negate: true
+#     match: after
+
+#output.console:
+#  pretty: true
+#only one output is allowed
+output.logstash:
+  hosts: ['host.docker.internal:5044']
+
+# for debug
+logging.level: info
+logging.to_files: true
+logging.files.path: /var/log/filebeat
+logging.files.name: filebeat.log
+logging.files.interval: 24h
+logging.files.rotateeverybytes: 510020000
+logging.files.keepfiles: 7
+logging.metrics.period: 600s
